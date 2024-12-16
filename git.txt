@@ -1,0 +1,231 @@
+git config --global user.name "jroshanjha"
+
+git config --global user.email "jroshan731@gmail.com"
+
+
+git config --get user.name
+
+git config --global user.name "Your Name"
+
+git clone https://openforge.gov.in/plugins/git/samadhan/Samadhan_live.git -b another repo
+
+git config --list  
+
+is --a / Is --all
+
+git log --all ( View Hidden Files in the Commit History: )
+
+git status  ( untracked - new files that git doesn't yet track )
+
+( modified - changed
+ staged - file is ready to be committed 
+ unmodified - unchanged  )
+
+git add .hidden_file / git add . ( all file )
+
+git commit -m'update' 
+
+git push origin repository name - upload local code into the remote repository 
+
+
+Init Command  ( Add new Git repository )
+mkdir newFile
+Used to new git repository
+git init
+
+...................
+echo "# LocalRepo" >> README.md
+git init
+git add README.md
+git commit -m "first commit"
+git branch -M main
+git remote add origin https://github.com/jroshanjha/LocalRepo.git
+git push -u origin main
+...........................
+...........................
+
+git remote add origin https://github.com/jroshanjha/LocalRepo.git
+git branch -M main
+git push -u origin main
+...............................
+...............................
+
+git remote add original link
+git remote -v ( to verify remote)
+
+git branch ( to check branch )
+git branch -M main (to rename branch ) git branch -m jroshan
+
+git push origin main
+git push -u origin main
+
+git checkout branch name -- change branch name
+git checkout -b branch name -- creator new branch 
+git branch -d branch name -- delete branch 
+
+
+git diff branch name
+git merge main
+
+
+
+git fetch origin branch-name ( Fetch a specific branch from a remote repository: ) -> fetches all new commits
+
+git fetch origin ( Fetch new commits from a remote branch: ) 
+
+
+git fetch --all ( Fetch all branches from a remote repository: ) 
+
+
+git pull ( Fetch and merge changes from a remote branch: ) 
+
+
+ git branch -r
+ git fetch origin development
+
+git merge origin/developemnt 
+
+git pull origin development 
+
+
+
+
+
+How to secure your Development Code with Another Software . 
+
+I am just talking about GitHub and Git  
+
+Before this post we have only Basic idea about Git control version but I have worked on last few days at Git Advanced 
+
+which I will share with you... 
+
+In this post 
+
+
+GitHub:
+GitHub is a web-based hosting service for version control using Git. 
+It provides a cloud-based platform for developers to host and collaborate on Git repositories. 
+
+Git:
+Git is a distributed version control system (DVCS) designed for tracking changes in source code during software development. 
+
+It provides commands like git init, git add, git commit, git push, git pull, git merge
+
+
+Here Mention How to connect with GitHub account for uploading development code and managed team worked . 
+
+1. Create Account :- 
+https://github.com/ ( Singup with Google ) 
+
+2. After Created Account click your profile as top right side  and click ( your repositories )
+
+3. Add Repository name ( like development ) with public or private then click create repository
+
+4. 
+
+..............................
+
+
+To add new changes from your local repository to the main repository on GitHub, you'll need to follow these steps:
+
+Ensure you're on the correct branch (usually 'main' or 'master'):
+Copygit checkout main
+
+Pull the latest changes from the remote repository:
+Copygit pull origin main
+
+Stage your changes:
+Copygit add .
+(This adds all changes. To add specific files, replace '.' with the file names)
+Commit your changes:
+Copygit commit -m "Your commit message describing the changes"
+
+Push your changes to the remote repository:
+Copygit push origin main
+
+
+If you're working on a feature branch:
+
+Commit your changes on your feature branch:
+Copygit add .
+git commit -m "Your commit message"
+
+Switch to the main branch:
+Copygit checkout main
+
+Pull the latest changes:
+Copygit pull origin main
+
+Merge your feature branch:
+Copygit merge your-feature-branch
+
+Push to the remote repository:
+Copygit push origin main
+
+
+If you're not the owner of the main repository:
+
+Fork the main repository on GitHub.
+Clone your fork locally.
+Make your changes, commit them.
+Push to your fork.
+Create a pull request on GitHub from your fork to the main repository.
+
+Remember to always pull the latest changes before pushing to avoid conflicts. If there are conflicts, you'll need to resolve them before pushing. CopyRetryClaude does no
+
+Machine Learning Introduction
+Linear Regression
+Polynomial Regression
+Logistic Regression
+KNN
+Imbalanced Learning
+Decision Tree
+Ensemble Bagging
+Ensemble Boosting
+SVM
+K Means Clustering
+Clustering Methods
+Anomaly & Outlier Detections
+Eigen Vector , Eigen Values & SVD
+Time Series
+Advanced Recommender Systems
+Introduction to Neural Networks
+Back Propagation and Multilayer Perceptrons
+Optimizers for Neural Networks
+Regularisation of Neural Networks
+Tensorflow and Keras
+Hyper Parameter Tuning for Neural Networks
+Practical aspects of designing MLPs
+Introduction to Computer Vision
+Image similarity Understanding Embeddings
+ML Multiclass Classification
+Object Localisation and Detection
+Siamese networks
+Generative Models & GANs Introduction
+Intro to NLP and Text processing
+Text Representation
+Word Embedding Word2Vec
+Language Modeling
+Topic Modeling
+RNNs
+LSTM
+NER
+Attention
+Transformers
+BERT
+Business Case Ninjacart Classification CNX Review & Myntra Buy
+
+..............................................................................
+
+
+Arrays
+Maths
+Time Complexity
+Bit Manipulation
+Searching
+Recursion
+Backtracking
+Sorting
+Hashing
+Stacks & Queues
+Linked Lists

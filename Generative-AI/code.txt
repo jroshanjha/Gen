@@ -1,0 +1,596 @@
+from sklearn.model_selection import KFold, cross_val_predict
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import (
+    accuracy_score, 
+    precision_score, 
+    recall_score, 
+    f1_score, 
+    confusion_matrix, 
+    classification_report
+)
+import numpy as np
+import pandas as pd
+
+# Set up K-Fold Cross-Validation
+kfold = KFold(n_splits=5, shuffle=True, random_state=42)
+
+# Initialize the model
+model = RandomForestClassifier(
+    n_estimators=100, 
+    random_state=42
+)
+
+# Perform Cross-Validated Predictions
+cv_predictions = cross_val_predict(
+    estimator=model, 
+    X=X_train, 
+    y=y_train, 
+    cv=kfold
+)
+
+# Comprehensive Model Evaluation
+def evaluate_predictions(y_true, y_pred):
+    results = {
+        'Accuracy': accuracy_score(y_true, y_pred),
+        'Precision (Macro)': precision_score(y_true, y_pred, average='macro'),
+        'Recall (Macro)': recall_score(y_true, y_pred, average='macro'),
+        'F1 Score (Macro)': f1_score(y_true, y_pred, average='macro')
+    }
+    return results
+
+# Compute evaluation metrics
+evaluation_metrics = evaluate_predictions(y_train, cv_predictions)
+
+print("Cross-Validation Prediction Metrics:")
+for metric, value in evaluation_metrics.items():
+    print(f"{metric}: {value:.4f}")
+
+# Detailed Classification Report
+print("\nDetailed Classification Report:")
+print(classification_report(y_train, cv_predictions))
+
+# Confusion Matrix
+conf_matrix = confusion_matrix(y_train, cv_predictions)
+print("\nConfusion Matrix:")
+print(conf_matrix)
+
+# Prediction Probability Analysis
+model_with_proba = RandomForestClassifier(
+    n_estimators=100, 
+    random_state=42,
+    probability=True
+)
+
+# Cross-validated prediction probabilities
+cv_pred_proba = cross_val_predict(
+    estimator=model_with_proba, 
+    X=X_train, 
+    y=y_train, 
+    cv=kfold, 
+    method='predict_proba'
+)
+
+# Analyze prediction probabilities
+def analyze_prediction_probabilities(y_true, y_pred_proba):
+    # Get the predicted class probabilities for each instance
+    max_proba = np.max(y_pred_proba, axis=1)
+    
+    # Categorize prediction confidence
+    confidence_bins = {
+        'High Confidence (>0.9)': np.mean(max_proba > 0.9),
+        'Medium Confidence (0.7-0.9)': np.mean((max_proba >= 0.7) & (max_proba <= 0.9)),
+        'Low Confidence (<0.7)': np.mean(max_proba < 0.7)
+    }
+    
+    return confidence_bins
+
+confidence_analysis = analyze_prediction_probabilities(y_train, cv_pred_proba)
+print("\nPrediction Confidence Analysis:")
+for category, proportion in confidence_analysis.items():
+    print(f"{category}: {proportion:.4f}")
+
+# Final Model Training and Prediction
+model.fit(X_train, y_train)
+final_predictions = model.predict(X_test)
+
+# Final Model Evaluation
+final_evaluation = evaluate_predictions(y_test, final_predictions)
+print("\nFinal Model Evaluation on Test Set:")
+for metric, value in final_evaluation.items():
+    print(f"{metric}: {value:.4f}")
+
+# Optional: Create a comprehensive results DataFrame
+results_df = pd.DataFrame({
+    'Metric': list(evaluation_metrics.keys()) + list(final_evaluation.keys()),
+    'Cross-Validation Score': list(evaluation_metrics.values()) + [np.nan] * len(final_evaluation),
+    'Test Set Score': [np.nan] * len(evaluation_metrics) + list(final_evaluation.values())
+})
+print("\nComprehensive Results Summary:")
+print(results_df)
+
+.............................................................
+.............................................................
+import numpy as np
+import pandas as pd
+from sklearn.model_selection import train_test_split, cross_val_predict
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import (
+    accuracy_score, 
+    precision_score, 
+    recall_score, 
+    f1_score, 
+    confusion_matrix, 
+    classification_report
+)
+from sklearn.preprocessing import StandardScaler
+
+# Assuming you have your original dataset and want to test on new data
+def predict_on_new_data(X_train, y_train, X_new):
+    # Preprocessing
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_new_scaled = scaler.transform(X_new)
+    
+    # Train the model
+    model = RandomForestClassifier(
+        n_estimators=100, 
+        random_state=42
+    )
+    model.fit(X_train_scaled, y_train)
+    
+    # Predict on new data
+    new_predictions = model.predict(X_new_scaled)
+    new_pred_proba = model.predict_proba(X_new_scaled)
+    
+    return model, new_predictions, new_pred_proba
+
+# Function to evaluate predictions
+def evaluate_predictions(y_true, y_pred):
+    results = {
+        'Accuracy': accuracy_score(y_true, y_pred),
+        'Precision (Macro)': precision_score(y_true, y_pred, average='macro', zero_division=0),
+        'Recall (Macro)': recall_score(y_true, y_pred, average='macro', zero_division=0),
+        'F1 Score (Macro)': f1_score(y_true, y_pred, average='macro', zero_division=0)
+    }
+    return results
+
+# Simulate new data scenario
+def test_on_new_data(X_train, y_train, X_new, y_new=None):
+    # Predict on new data
+    model, new_predictions, new_pred_proba = predict_on_new_data(X_train, y_train, X_new)
+    
+    # Evaluation (if ground truth is available)
+    if y_new is not None:
+        # Performance metrics
+        performance_metrics = evaluate_predictions(y_new, new_predictions)
+        
+        print("New Data Prediction Metrics:")
+        for metric, value in performance_metrics.items():
+            print(f"{metric}: {value:.4f}")
+        
+        # Detailed classification report
+        print("\nDetailed Classification Report:")
+        print(classification_report(y_new, new_predictions))
+        
+        # Confusion Matrix
+        conf_matrix = confusion_matrix(y_new, new_predictions)
+        print("\nConfusion Matrix:")
+        print(conf_matrix)
+    
+    # Prediction Probability Analysis
+    def analyze_prediction_probabilities(y_pred_proba):
+        max_proba = np.max(y_pred_proba, axis=1)
+        
+        confidence_bins = {
+            'High Confidence (>0.9)': np.mean(max_proba > 0.9),
+            'Medium Confidence (0.7-0.9)': np.mean((max_proba >= 0.7) & (max_proba <= 0.9)),
+            'Low Confidence (<0.7)': np.mean(max_proba < 0.7)
+        }
+        
+        return confidence_bins, max_proba
+    
+    # Analyze prediction probabilities
+    confidence_analysis, max_probabilities = analyze_prediction_probabilities(new_pred_proba)
+    
+    print("\nPrediction Confidence Analysis:")
+    for category, proportion in confidence_analysis.items():
+        print(f"{category}: {proportion:.4f}")
+    
+    # Detailed probability analysis
+    prob_df = pd.DataFrame({
+        'Prediction': new_predictions,
+        'Max Probability': max_probabilities
+    })
+    
+    print("\nProbability Distribution:")
+    print(prob_df.describe())
+    
+    # Top predictions with their probabilities
+    top_predictions = prob_df.nlargest(10, 'Max Probability')
+    print("\nTop 10 Most Confident Predictions:")
+    print(top_predictions)
+    
+    return model, new_predictions, new_pred_proba
+
+# Example usage
+# Assuming X_new is your new dataset
+try:
+    # If you have ground truth for new data
+    model, predictions, pred_proba = test_on_new_data(X_train, y_train, X_new, y_new)
+except NameError:
+    # If no ground truth or X_new is not defined
+    print("\nNo new data provided. Please prepare X_new (and optionally y_new).")
+    print("Example preparation:")
+    print("X_new = your_new_data_features")
+    print("y_new = your_new_data_labels  # Optional")
+
+# Additional Diagnostic Recommendations
+def model_diagnostics(model, X_train, y_train):
+    # Feature Importance
+    feature_importance = pd.DataFrame({
+        'feature': X_train.columns,
+        'importance': model.feature_importances_
+    }).sort_values('importance', ascending=False)
+    
+    print("\nTop 10 Most Important Features:")
+    print(feature_importance.head(10))
+    
+    return feature_importance
+
+# Call model diagnostics if model is available
+try:
+    feature_importance = model_diagnostics(model, X_train, y_train)
+except:
+    print("Could not perform model diagnostics. Ensure model is trained.")
+...............................................................................................
+..............................................................................................
+
+import numpy as np
+import pandas as pd
+from sklearn.model_selection import cross_val_predict, KFold
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
+from sklearn.metrics import (
+    accuracy_score, 
+    precision_score, 
+    recall_score, 
+    f1_score, 
+    classification_report, 
+    confusion_matrix
+)
+
+# Comprehensive Cross-Validation Prediction Function
+def cross_validation_prediction(X_train, y_train, X_test, y_test=None):
+    # Create a pipeline with scaling and classifier
+    pipeline = Pipeline([
+        ('scaler', StandardScaler()),
+        ('classifier', RandomForestClassifier(
+            n_estimators=100, 
+            random_state=42
+        ))
+    ])
+    
+    # Set up K-Fold Cross-Validation
+    kfold = KFold(n_splits=5, shuffle=True, random_state=42)
+    
+    # Perform cross-validated predictions on training data
+    cv_predictions_train = cross_val_predict(
+        estimator=pipeline, 
+        X=X_train, 
+        y=y_train, 
+        cv=kfold
+    )
+    
+    # Evaluate cross-validation predictions on training data
+    print("Cross-Validation Metrics on Training Data:")
+    print("Accuracy:", accuracy_score(y_train, cv_predictions_train))
+    print("Precision (Macro):", precision_score(y_train, cv_predictions_train, average='macro'))
+    print("Recall (Macro):", recall_score(y_train, cv_predictions_train, average='macro'))
+    print("F1 Score (Macro):", f1_score(y_train, cv_predictions_train, average='macro'))
+    
+    # Detailed Classification Report for Training Data
+    print("\nDetailed Classification Report (Training Data):")
+    print(classification_report(y_train, cv_predictions_train))
+    
+    # Predict on test data
+    pipeline.fit(X_train, y_train)
+    
+    # Predictions on test data
+    test_predictions = pipeline.predict(X_test)
+    
+    # Evaluate on test data if ground truth is available
+    if y_test is not None:
+        print("\nTest Data Prediction Metrics:")
+        print("Accuracy:", accuracy_score(y_test, test_predictions))
+        print("Precision (Macro):", precision_score(y_test, test_predictions, average='macro'))
+        print("Recall (Macro):", recall_score(y_test, test_predictions, average='macro'))
+        print("F1 Score (Macro):", f1_score(y_test, test_predictions, average='macro'))
+        
+        print("\nDetailed Classification Report (Test Data):")
+        print(classification_report(y_test, test_predictions))
+        
+        # Confusion Matrix
+        print("\nConfusion Matrix:")
+        print(confusion_matrix(y_test, test_predictions))
+    
+    # Probability Predictions
+    cv_pred_proba_train = cross_val_predict(
+        estimator=pipeline, 
+        X=X_train, 
+        y=y_train, 
+        cv=kfold, 
+        method='predict_proba'
+    )
+    
+    # Probability Analysis
+    def analyze_probabilities(y_true, pred_proba):
+        # Maximum prediction probabilities
+        max_proba = np.max(pred_proba, axis=1)
+        
+        # Confidence categorization
+        confidence_analysis = {
+            'High Confidence (>0.9)': np.mean(max_proba > 0.9),
+            'Medium Confidence (0.7-0.9)': np.mean((max_proba >= 0.7) & (max_proba <= 0.9)),
+            'Low Confidence (<0.7)': np.mean(max_proba < 0.7)
+        }
+        
+        return confidence_analysis, max_proba
+    
+    # Analyze probabilities for training data
+    confidence_train, max_proba_train = analyze_probabilities(y_train, cv_pred_proba_train)
+    
+    print("\nProbability Confidence Analysis (Training Data):")
+    for category, proportion in confidence_train.items():
+        print(f"{category}: {proportion:.4f}")
+    
+    # Probability Distribution
+    prob_df = pd.DataFrame({
+        'True Label': y_train,
+        'Predicted Label': cv_predictions_train,
+        'Max Probability': max_proba_train
+    })
+    
+    print("\nProbability Distribution Summary:")
+    print(prob_df.groupby(['True Label', 'Predicted Label'])['Max Probability'].describe())
+    
+    # Feature Importance
+    feature_importances = pipeline.named_steps['classifier'].feature_importances_
+    feature_importance_df = pd.DataFrame({
+        'Feature': X_train.columns,
+        'Importance': feature_importances
+    }).sort_values('Importance', ascending=False)
+    
+    print("\nTop 10 Most Important Features:")
+    print(feature_importance_df.head(10))
+    
+    return {
+        'train_predictions': cv_predictions_train,
+        'test_predictions': test_predictions,
+        'train_probabilities': cv_pred_proba_train,
+        'feature_importances': feature_importance_df
+    }
+
+# Example Usage
+try:
+    # Assuming X_train, y_train, X_test, y_test are already defined
+    results = cross_validation_prediction(X_train, y_train, X_test, y_test)
+except NameError:
+    print("Please prepare your datasets:")
+    print("X_train: Training features")
+    print("y_train: Training labels")
+    print("X_test: Test features")
+    print("y_test: Test labels (optional)")
+
+.....................................................................
+.......................................................................
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split, cross_val_score, KFold
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.pipeline import Pipeline
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import (
+    classification_report, 
+    confusion_matrix, 
+    accuracy_score, 
+    precision_score, 
+    recall_score, 
+    f1_score
+)
+
+# Function to load and preprocess dataset
+def load_and_preprocess_data(filepath):
+    """
+    Load dataset, handle preprocessing, and prepare for modeling
+    
+    Parameters:
+    -----------
+    filepath : str
+        Path to the dataset CSV file
+    
+    Returns:
+    --------
+    tuple: (features, target, feature_names)
+    """
+    # Load dataset
+    df = pd.read_csv(filepath)
+    
+    # Identify numeric and categorical columns
+    numeric_cols = df.select_dtypes(include=['int64', 'float64']).columns
+    categorical_cols = df.select_dtypes(include=['object']).columns
+    
+    # Handle categorical variables
+    for col in categorical_cols:
+        le = LabelEncoder()
+        df[col] = le.fit_transform(df[col].astype(str))
+    
+    # Separate features and target
+    # Assumes last column is the target variable
+    X = df.iloc[:, :-1]
+    y = df.iloc[:, -1]
+    
+    return X, y, list(X.columns)
+
+# Comprehensive model training and evaluation function
+def train_and_evaluate_model(X, y, test_size=0.2, random_state=42):
+    """
+    Train model with k-fold cross-validation and evaluate performance
+    
+    Parameters:
+    -----------
+    X : array-like of features
+    y : array-like of target
+    test_size : float, optional (default=0.2)
+    random_state : int, optional (default=42)
+    
+    Returns:
+    --------
+    dict: Comprehensive model evaluation results
+    """
+    # Split data
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=test_size, random_state=random_state, stratify=y
+    )
+    
+    # Create pipeline with scaling and model
+    pipeline = Pipeline([
+        ('scaler', StandardScaler()),
+        ('classifier', RandomForestClassifier(
+            n_estimators=100, 
+            random_state=random_state
+        ))
+    ])
+    
+    # Perform cross-validation
+    cv = KFold(n_splits=5, shuffle=True, random_state=random_state)
+    cv_scores = cross_val_score(pipeline, X_train, y_train, cv=cv, scoring='accuracy')
+    
+    # Fit model on entire training data
+    pipeline.fit(X_train, y_train)
+    
+    # Predict on test set
+    y_pred = pipeline.predict(X_test)
+    
+    # Comprehensive evaluation
+    results = {
+        'cross_val_scores': cv_scores,
+        'cv_mean_accuracy': cv_scores.mean(),
+        'cv_std_accuracy': cv_scores.std(),
+        'test_accuracy': accuracy_score(y_test, y_pred),
+        'precision': precision_score(y_test, y_pred, average='weighted'),
+        'recall': recall_score(y_test, y_pred, average='weighted'),
+        'f1_score': f1_score(y_test, y_pred, average='weighted'),
+        'classification_report': classification_report(y_test, y_pred),
+        'confusion_matrix': confusion_matrix(y_test, y_pred)
+    }
+    
+    return pipeline, results
+
+# Function to predict new data
+def predict_new_data(model, new_data):
+    """
+    Make predictions on new, unseen data
+    
+    Parameters:
+    -----------
+    model : trained sklearn pipeline
+    new_data : pandas DataFrame
+    
+    Returns:
+    --------
+    array: Predictions for new data
+    """
+    # Ensure new_data matches training feature columns
+    # Preprocessing should match original data preparation
+    return model.predict(new_data)
+
+# Visualization of model performance
+def plot_cross_validation_results(cv_scores):
+    """
+    Visualize cross-validation scores
+    
+    Parameters:
+    -----------
+    cv_scores : array-like of cross-validation scores
+    """
+    plt.figure(figsize=(8, 4))
+    plt.title('Cross-Validation Scores')
+    plt.boxplot(cv_scores)
+    plt.ylabel('Accuracy')
+    plt.show()
+
+# Example usage (commented out - replace with actual dataset path)
+# filepath = 'your_dataset.csv'
+# X, y, feature_names = load_and_preprocess_data(filepath)
+# 
+# # Train and evaluate model
+# trained_model, model_results = train_and_evaluate_model(X, y)
+# 
+# # Print results
+# print("Cross-Validation Mean Accuracy:", model_results['cv_mean_accuracy'])
+# print("Test Accuracy:", model_results['test_accuracy'])
+# print("\nClassification Report:\n", model_results['classification_report'])
+# 
+# # Plot cross-validation results
+# plot_cross_validation_results(model_results['cross_val_scores'])
+# 
+# # Predict on new data (example)
+# # new_data = pd.DataFrame(...)  # Prepare new data matching training features
+# # predictions = predict_new_data(trained_model, new_data)
+
+
+
+# List to maintain the different cross-validation scores 
+cross_val_scores_ridge = [] 
+# List to maintain the different values of alpha 
+alpha = []
+# Loop to compute the different values of cross-validation scores 
+for i in range(1, 9): 
+    ridgeModel = Ridge(alpha = i * 0.25) 
+    ridgeModel.fit(X_train, y_train) 
+    scores = cross_val_score(ridgeModel, X, y, cv = 10) 
+    avg_cross_val_score = mean(scores)*100
+    cross_val_scores_ridge.append(avg_cross_val_score) 
+    alpha.append(i * 0.25) 
+
+# List to maintain the cross-validation scores 
+cross_val_scores_lasso = [] 
+  
+# List to maintain the different values of Lambda 
+Lambda = [] 
+  
+# Loop to compute the cross-validation scores 
+for i in range(1, 9): 
+    lassoModel = Lasso(alpha = i * 0.25, tol = 0.0925) 
+    lassoModel.fit(X_train, y_train) 
+    scores = cross_val_score(lassoModel, X, y, cv = 10) 
+    avg_cross_val_score = mean(scores)*100
+    cross_val_scores_lasso.append(avg_cross_val_score) 
+    Lambda.append(i * 0.25) 
+  
+# Loop to print the different values of cross-validation scores 
+for i in range(0, len(alpha)): 
+    print(str(alpha[i])+' : '+str(cross_val_scores_lasso[i]))
+
+
+# Building the two lists for visualization 
+models = ['Linear Regression', 'Ridge Regression', 'Lasso Regression'] 
+scores = [linearModel.score(X_test, y_test), 
+         ridgeModelChosen.score(X_test, y_test), 
+         lassoModelChosen.score(X_test, y_test)] 
+  
+# Building the dictionary to compare the scores 
+mapping = {} 
+mapping['Linear Regression'] = linearModel.score(X_test, y_test) 
+mapping['Ridge Regression'] = ridgeModelChosen.score(X_test, y_test) 
+mapping['Lasso Regression'] = lassoModelChosen.score(X_test, y_test) 
+  
+# Printing the scores for different models 
+for key, val in mapping.items(): 
+    print(str(key)+' : '+str(val))
+# Loop to print the different values of cross-validation scores 
+for i in range(0, len(alpha)): 
+    print(str(alpha[i])+' : '+str(cross_val_scores_ridge[i])) 
