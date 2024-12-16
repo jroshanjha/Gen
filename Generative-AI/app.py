@@ -2,6 +2,9 @@ from flask import *
 from flask import Flask, render_template, request, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
+import numpy as np
+# -- 
+from transformers import pipeline
 
 app =Flask(__name__)
 app.secret_key = 'your secret key'
@@ -24,8 +27,8 @@ def index():
         generated_text = request.args.get('generated_text')
                                                   
         return render_template('index.html',prompt=prompt,generated_text=generated_text)
-    
-    return render_template('login.html')
+    return redirect(url_for('login',title='Login Page'))
+    #return render_template('login.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -65,6 +68,30 @@ def predict():
     return redirect(url_for('index',prompt=prompt,generated_text=generated_text))
     #return redirect("https://www.google.com")
     #return render_template('index.html',prompt=prompt,generated_text=generated_text)
+
+@app.route('/transformers',methods=['GET','POST'])
+def transformers():
+    if session.get('username') and session.get('loggedin'): 
+        # Initialize sentiment analysis pipeline
+        sentiment_analyzer = pipeline("sentiment-analysis") 
+        # Get text from the form
+        #text = request.form.get('text')
+        # Example texts
+        texts = [
+            "I love this product! It's amazing and works perfectly.",
+            "This movie was terrible. I wouldn't recommend it to anyone.",
+            "The weather is okay today, not great but not bad either."
+        ]
+        output =dict()
+        for text in texts:
+            result = sentiment_analyzer(text)[0]
+            # new_arr = np.array([text,result])
+            # np.vstack([output,new_arr])
+            #output.update()
+            print(f"Text: {text}")
+            print(f"Sentiment: {result['label']}, Score: {result['score']:.4f}\n")
+        return render_template('transformers.html',output = output)
+    return redirect(url_for('login',title='Login Page'))
 
 if __name__ == '__main__':
     app.run(debug=True,port='8000')
