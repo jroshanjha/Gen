@@ -20,7 +20,10 @@ class User(db.Model):
 @app.route('/')
 def index():
     if 'username' in session and session.get('loggedin'):
-        return render_template('index.html')
+        prompt = request.args.get('prompt')
+        generated_text = request.args.get('generated_text')
+                                                  
+        return render_template('index.html',prompt=prompt,generated_text=generated_text)
     
     return render_template('login.html')
 
@@ -53,11 +56,15 @@ def predict():
     # input_ids = tokenizer.encode(text, return_tensors="pt")
     # output = model.generate(input_ids, max_length=100)
     input_ids = tokenizer.encode(prompt, return_tensors='pt')
-    output = model.generate(input_ids, max_length=100, num_return_sequences=1)
+    output = model.generate(input_ids, max_length=1000, num_return_sequences=1)
     generated_text = tokenizer.decode(output[0], skip_special_tokens=True)
     # print(generated_text)
     # return str(output)
-    return render_template('index.html',prompt=prompt,generated_text=generated_text)
+    # Redirect to an external URL
+    # Redirect to another route within the app
+    return redirect(url_for('index',prompt=prompt,generated_text=generated_text))
+    #return redirect("https://www.google.com")
+    #return render_template('index.html',prompt=prompt,generated_text=generated_text)
 
 if __name__ == '__main__':
     app.run(debug=True,port='8000')
