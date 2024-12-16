@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2 class="mb-4">Input Your Prompt:-</h2>
+    <form action="{{ url_for('predict') }}" method="post">
+    <!-- Email Input -->
+    <div class="mb-3">
+        <label for="emailInput" class="form-label">Email Address</label>
+        <input type="email" class="form-control" id="emailInput" placeholder="name@example.com" value="{{session.username}}">
+    </div>
+    
+    <!-- Textarea Input -->
+    <div class="mb-3">
+        <label for="messageInput" class="form-label">Message</label>
+        <textarea class="form-control" name='prompt' id="messageInput" rows="3" placeholder="Write your message here..."></textarea>
+    </div>
+    <!-- Submit Button -->
+    <button class="btn btn-primary" id="submitBtn">Submit</button>
+<form>
+    <Br><Br>
+    {%if 'username' in session and session.get('loggedin') %}
+    <div id="output-section1" class="alert alert-info">
+        <h4>Your Input:</h4>
+      <p><strong>Email:</strong> <span id="outputEmail">{{session.username}}</span></p>
+      <p><strong>Message:</strong> <span id="outputMessage">{{prompt}}</span></p>
+      <p><strong>GENERATED TEXT:-</strong> <span id='text'> {{generated_text}} </span></p>
+    </div>
+    {% endif %}
+
+
+    <!-- Output Section -->
+    <div id="output-section" class="alert alert-info">
+      <h4>Your Input:</h4>
+      <p><strong>Email:</strong> <span id="outputEmail">{{session.username}}</span></p>
+      <p><strong>Message:</strong> <span id="outputMessage">{{prompt}}</span></p>
+      <p><strong>Message:</strong> <span id="outputMessage">{{generated_text}}</span></p>
+    </div>
+  </div>
+
+
+{%endblock%}

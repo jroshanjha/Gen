@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+
+<div class="container mt-5">
+    <form action="{{ url_for('login') }}" method="post">
+      <!-- Email Field -->
+      <div class="mb-3 row">
+        <label for="staticEmail" class="col-sm-2 col-form-label">Email</label>
+        <div class="col-sm-10">
+          {%if session.username and session.loggedin==True %}
+          <input type="text" name ='username' class="form-control-plaintext" id="staticEmail" value="{{session.username}}" Required>
+          {% else%}
+          <input type="text" name ='username' class="form-control-plaintext" id="staticEmail" value="example@gmail.com" Required>
+         {%endif%}
+        </div>
+      </div>
+      
+      <!-- Password Field -->
+      <div class="mb-3 row">
+        <label for="inputPassword" name ='password' class="col-sm-2 col-form-label">Password</label>
+        <div class="col-sm-10">
+          <input type="password" class="form-control" id="inputPassword" placeholder="Enter your password" Required>
+        </div>
+      </div>
+      
+      <!-- Submit Button -->
+      <div class="row">
+        <div class="col-sm-10 offset-sm-2">
+          <button type="submit" class="btn btn-primary">Submit</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+{%endblock%}
