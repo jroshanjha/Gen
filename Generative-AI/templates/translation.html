@@ -5,15 +5,19 @@
     <form method="POST">
         <label for="source_language">Source Language:</label>
         <select name="source_language" id="source_language" required>
-            {% for lang in languages %}
-                <option value="{{ lang }}">{{ lang }}</option>
+            {% for lang in languages.items() %}
+                <option value="{{ lang[0] }}" {% if lang[1] == source_lang %}selected{% endif %}>
+                    {{ lang[0] }}
+                </option>
             {% endfor %}
         </select>
 
         <label for="target_language">Target Language:</label>
         <select name="target_language" id="target_language" required>
-            {% for lang in languages %}
-                <option value="{{ lang }}">{{ lang }}</option>
+            {% for lang in languages.items() %}
+                <option value="{{ lang[0] }}" {% if  lang[1] ==target_lang%}selected{%endif%}>
+                    {{ lang[0] }}
+                </option>
             {% endfor %}
         </select>
 

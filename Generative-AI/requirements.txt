@@ -1,3 +1,15 @@
 Flask==3.0.2
-transformers==4.40.1
-torch  #Required for Hugging Face models
+# transformers==4.40.1
+# torch  #Required for Hugging Face models
+
+# pip install Flask transformers sentencepiece torch
+
+#flask==2.2.3
+flask-bootstrap5  # ==3.3.7.1
+googletrans==3.1.0a0
+langdetect==1.0.9
+
+
+#pip install flask_sqlalchemy
+#pip install transformers
+#sentencepiece

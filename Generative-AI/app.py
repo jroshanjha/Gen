@@ -1,5 +1,5 @@
 from flask import * 
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for,jsonify
 from flask_sqlalchemy import SQLAlchemy
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
 import numpy as np
@@ -8,9 +8,24 @@ from transformers import pipeline
 # -- Language Translation
 from transformers import MarianMTModel, MarianTokenizer
 import sentencepiece
+from functools import lru_cache
 
+import os
+# Try these alternatives:
+from flask_bootstrap import Bootstrap
+#from flask_bootstrap5 import Bootstrap5
+from googletrans import Translator
+from langdetect import detect
+
+# Flask App Configuration
 app =Flask(__name__)
 app.secret_key = 'your secret key'
+app.config['SECRET_KEY'] = 'your_secret_key_here'
+Bootstrap(app)
+
+# Translation Utility
+translator = Translator()
+
 
 '''
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
@@ -107,7 +122,7 @@ def transformers():
             generated_text = text_generator(prompt, max_length=500, num_return_sequences=1)[0] # 100
             #generated_text = generated_text.split(":")
             return render_template('transformers.html',prompt=prompt,generated_text = generated_text)
-        return render_template('transformers.html')
+        return render_template('transformers.html',prompt="",generated_text=dict())
        
     return redirect(url_for('login',title='Login Page'))
 def translate(text, model_name):
@@ -125,11 +140,19 @@ def translate(text, model_name):
 #translated_text = translate(english_text, model_name)
 
 # Function to load the appropriate model
+# Cache loaded models to avoid reloading them repeatedly
+@lru_cache(maxsize=10)
 def load_translation_model(source_lang, target_lang):
+    """
+    Load and cache the MarianMT model and tokenizer for a specific language pair.
+    """
     model_name = f"Helsinki-NLP/opus-mt-{source_lang}-{target_lang}"
-    tokenizer = MarianTokenizer.from_pretrained(model_name)
-    model = MarianMTModel.from_pretrained(model_name)
-    return tokenizer, model
+    try:
+        tokenizer = MarianTokenizer.from_pretrained(model_name)
+        model = MarianMTModel.from_pretrained(model_name)
+        return tokenizer, model
+    except Exception as e:
+        raise ValueError(f"Model for {source_lang} to {target_lang} not available: {str(e)}")
 
 # Translate text
 def translate_text(tokenizer, model, text):
@@ -137,6 +160,24 @@ def translate_text(tokenizer, model, text):
     translated = model.generate(inputs, max_length=512)
     return tokenizer.decode(translated[0], skip_special_tokens=True)
 # List of available language pairs
+# LANGUAGE_CODES = {
+#     "English": "en",
+#     "French": "fr",
+#     "Spanish": "es",
+#     "German": "de",
+#     "Italian": "it",
+#     "Russian": "ru",
+#     "Chinese": "zh",
+#     "Japanese": "ja",
+#     "Arabic": "ar",
+#     "Hindi": "hi",
+#     "Portuguese": "pt",
+#     "Dutch": "nl",
+#     "Swedish": "sv",
+#     "Finnish": "fi",
+#     "Turkish": "tr"
+# }
+# Expanded list of supported languages
 LANGUAGE_CODES = {
     "English": "en",
     "French": "fr",
@@ -152,15 +193,23 @@ LANGUAGE_CODES = {
     "Dutch": "nl",
     "Swedish": "sv",
     "Finnish": "fi",
-    "Turkish": "tr"
+    "Turkish": "tr",
+    "Norwegian": "no",
+    "Bengali": "bn",
+    "Korean": "ko",
+    "Polish": "pl",
+    "Romanian": "ro",
+    "Greek": "el"
 }
 
 @app.route('/translation',methods=['GET','POST'])
 def translation():
     if session.get('username') and session.get('loggedin'):
         translated_text = ""
-        source_lang = LANGUAGE_CODES['Hindi']
-        target_lang = LANGUAGE_CODES['English']
+        source_lang = 'hi'
+        target_lang = 'en'
+        #selected_source_language = None
+        #selected_target_language = None
         if request.method == 'POST':
             source_lang_name = request.form.get("source_language")
             target_lang_name = request.form.get("target_language")
@@ -176,12 +225,111 @@ def translation():
                     try:
                         tokenizer, model = load_translation_model(source_lang, target_lang)
                         translated_text = translate_text(tokenizer, model, input_text)
-                    except Exception as e:
-                        #translated_text = f"Error: {str(e)}"
+                    except ValueError as ve:
+                        #translated_text = str(ve)
                         translated_text = translated_text
-                    return render_template("translation.html", languages=LANGUAGE_CODES.keys(), translated_text=translated_text)
+                    except Exception as e:
+                        #translated_text = f"An error occurred: {str(e)}"
+                        translated_text = translated_text
+        return render_template("translation.html",
+                               languages=LANGUAGE_CODES, # language_codes.keys()
+                               translated_text=translated_text,
+                               source_lang=source_lang,
+                               target_lang = target_lang)
     return redirect(url_for('login',title='Login Page'))
-        
+   
+# Language Codes Dictionary
+LANGUAGES = {
+    'auto': 'Detect Language',
+    'en': 'English',
+    'es': 'Spanish',
+    'fr': 'French',
+    'de': 'German',
+    'it': 'Italian',
+    'ja': 'Japanese',
+    'ko': 'Korean',
+    'ru': 'Russian',
+    'zh-cn': 'Chinese (Simplified)',
+    'ar': 'Arabic',
+    'hi': 'Hindi',
+    'pt': 'Portuguese',
+    'nl': 'Dutch'
+}
+@app.route('/api/translations')
+def translation_page():
+    """
+    Main translation page route
+    Handles translation requests and renders the interface
+    """
+    return render_template('trans.html', 
+                           languages=LANGUAGES) # titlel='Multilingual Translator'
+@app.route('/translate', methods=['POST'])
+def translate_text():
+    """
+    API endpoint for translation
+    Supports multiple language translations
+    """
+    try:
+        # Get request data
+        text = request.form.get('text', '').strip()
+        source_lang = request.form.get('source_lang', 'auto')
+        target_lang = request.form.get('target_lang', 'en')
+
+        # Detect source language if 'auto' is selected
+        if source_lang == 'auto':
+            try:
+                source_lang = detect(text)
+            except:
+                source_lang = 'en'
+
+        # Perform translation
+        translation = translator.translate(
+            text, 
+            src=source_lang, 
+            dest=target_lang
+        )
+
+        # Prepare response
+        response = {
+            'original_text': text,
+            'translated_text': translation.text,
+            'source_lang': LANGUAGES.get(translation.src, translation.src),
+            'target_lang': LANGUAGES.get(translation.dest, translation.dest)
+        }
+
+        return jsonify(response)
+
+    except Exception as e:
+        return jsonify({
+            'error': str(e),
+            'message': 'Translation failed'
+        }), 500
+
+@app.route('/detect-language', methods=['POST'])
+def detect_language():
+    """
+    Language detection endpoint
+    """
+    try:
+        text = request.form.get('text', '').strip()
+        if not text:
+            return jsonify({'language': 'No text provided'})
+
+        # Detect language
+        detected_lang = detect(text)
+        language_name = LANGUAGES.get(detected_lang, detected_lang)
+
+        return jsonify({
+            'code': detected_lang,
+            'language': language_name
+        })
+    except Exception as e:
+        return jsonify({
+            'error': str(e),
+            'message': 'Language detection failed'
+        }), 500
+
+# Main Entry Point:-       
 if __name__ == '__main__':
     app.run(debug=True,port='8000')
 
