@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<h3>Perform sentiment analysis</h3>
+<ul>
+    {% for text in output %}
+    <li><strong>Text:</strong> {{ text[0] }}</li>
+    <li><strong>Sentiment:</strong> {{ text[1]['label'] }}</li>
+    <li><strong>Score:</strong> {{ text[1]['score'] }}</li>
+    <br>
+{% endfor %}
+</ul>
+{% endblock %}

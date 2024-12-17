@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1>Language Translator</h1>
+    <form method="POST">
+        <label for="source_language">Source Language:</label>
+        <select name="source_language" id="source_language" required>
+            {% for lang in languages %}
+                <option value="{{ lang }}">{{ lang }}</option>
+            {% endfor %}
+        </select>
+
+        <label for="target_language">Target Language:</label>
+        <select name="target_language" id="target_language" required>
+            {% for lang in languages %}
+                <option value="{{ lang }}">{{ lang }}</option>
+            {% endfor %}
+        </select>
+
+        <label for="text">Text to Translate:</label>
+        <textarea name="text" id="text" rows="5" cols="50" required></textarea>
+
+        <button type="submit">Translate</button>
+    </form>
+
+    {% if translated_text %}
+        <h2>Translated Text:</h2>
+        <p>{{ translated_text }}</p>
+    {% endif %}
+
+    
+{%endblock%}

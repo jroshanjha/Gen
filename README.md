@@ -27,7 +27,25 @@ class User(db.Model):
 app =Flask(__name__)
 app.secret_key = 'your secret key'
 
-
-
 if __name__ == '__main__':
     app.run(debug=True,port='8000')
+
+language-translation-app/
+│
+├── app.py
+├── templates/
+│   └── translation.html
+├── requirements.txt
+└── README.md
+
+translation_app/
+│-- app.py                # Flask server
+│-- templates/
+│   └── index.html        # Frontend template
+└── requirements.txt      # Dependencies
+
+# pip install sentencepiece
+-- SentencePiece is a subword tokenizer library that MarianMT models rely on for tokenizing input text.
+-- The tokenizer splits text into smaller units, which makes it efficient for translating various languages.
+import sentencepiece
+python -c "import sentencepiece; print(sentencepiece.__version__)"
