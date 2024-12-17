@@ -6,8 +6,13 @@ from flask import *
 from flask import Flask, render_template, request, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
+from transformers import pipeline # Generate a text givin Prompt:- 
+# Initialize text generation pipeline
+text_generator = pipeline("text-generation", model="gpt2")
 
-
+# Language Translation
+# use the MarianMT model for translation.
+from transformers import MarianMTModel, MarianTokenizer
 '''
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
