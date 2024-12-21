@@ -1,0 +1,688 @@
+Backend (app.js):
+const express = require('express');
+const mongoose = require('mongoose');
+const bodyParser = require('body-parser');
+const cors = require('cors');
+const userRoutes = require('./routes/userRoutes');
+const postRoutes = require('./routes/postRoutes');
+
+const app = express();
+
+// Middleware
+app.use(cors());
+app.use(bodyParser.json());
+
+// Connect to MongoDB
+mongoose.connect('mongodb://localhost/instagram_clone', { useNewUrlParser: true, useUnifiedTopology: true });
+
+// Routes
+app.use('/api/users', userRoutes);
+app.use('/api/posts', postRoutes);
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+User Model (models/User.js):
+const mongoose = require('mongoose');
+
+const UserSchema = new mongoose.Schema({
+  username: { type: String, required: true, unique: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  profilePicture: { type: String, default: '' },
+  followers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  following: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+});
+
+module.exports = mongoose.model('User', UserSchema);
+
+Post Model (models/Post.js):
+const mongoose = require('mongoose');
+
+const PostSchema = new mongoose.Schema({
+  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  image: { type: String, required: true },
+  caption: { type: String, default: '' },
+  likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  comments: [{
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    text: String,
+    createdAt: { type: Date, default: Date.now }
+  }],
+  createdAt: { type: Date, default: Date.now }
+});
+
+module.exports = mongoose.model('Post', PostSchema);
+
+
+User Routes (routes/userRoutes.js):
+const express = require('express');
+const router = express.Router();
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
+
+// Register
+router.post('/register', async (req, res) => {
+  try {
+    const { username, email, password } = req.body;
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = new User({ username, email, password: hashedPassword });
+    await user.save();
+    res.status(201).json({ message: 'User created successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Error creating user' });
+  }
+});
+
+// Login
+router.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) return res.status(400).json({ error: 'Invalid credentials' });
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(400).json({ error: 'Invalid credentials' });
+    const token = jwt.sign({ userId: user._id }, 'your_jwt_secret');
+    res.json({ token });
+  } catch (error) {
+    res.status(500).json({ error: 'Error logging in' });
+  }
+});
+
+module.exports = router;
+
+Post Routes (routes/postRoutes.js):
+const express = require('express');
+const router = express.Router();
+const Post = require('../models/Post');
+const auth = require('../middleware/auth');
+
+// Create a post
+router.post('/', auth, async (req, res) => {
+  try {
+    const { image, caption } = req.body;
+    const post = new Post({ user: req.user.id, image, caption });
+    await post.save();
+    res.status(201).json(post);
+  } catch (error) {
+    res.status(500).json({ error: 'Error creating post' });
+  }
+});
+
+// Get all posts
+router.get('/', auth, async (req, res) => {
+  try {
+    const posts = await Post.find().sort({ createdAt: -1 }).populate('user', 'username');
+    res.json(posts);
+  } catch (error) {
+    res.status(500).json({ error: 'Error fetching posts' });
+  }
+});
+
+// Like a post
+router.post('/:id/like', auth, async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ error: 'Post not found' });
+    if (post.likes.includes(req.user.id)) {
+      post.likes = post.likes.filter(like => like.toString() !== req.user.id);
+    } else {
+      post.likes.push(req.user.id);
+    }
+    await post.save();
+    res.json(post);
+  } catch (error) {
+    res.status(500).json({ error: 'Error liking post' });
+  }
+});
+
+module.exports = router;
+
+Frontend (React components):
+import React from 'react';
+import { BrowserRouter as Router, Route, Switch } from 'react-router-dom';
+import Navbar from './components/Navbar';
+import Home from './components/Home';
+import Login from './components/Login';
+import Register from './components/Register';
+import Profile from './components/Profile';
+
+function App() {
+  return (
+    <Router>
+      <Navbar />
+      <Switch>
+        <Route exact path="/" component={Home} />
+        <Route path="/login" component={Login} />
+        <Route path="/register" component={Register} />
+        <Route path="/profile/:id" component={Profile} />
+      </Switch>
+    </Router>
+  );
+}
+
+export default App;
+
+Home.js:
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import Post from './Post';
+
+function Home() {
+  const [posts, setPosts] = useState([]);
+
+  useEffect(() => {
+    const fetchPosts = async () => {
+      const res = await axios.get('/api/posts');
+      setPosts(res.data);
+    };
+    fetchPosts();
+  }, []);
+
+  return (
+    <div className="home">
+      {posts.map(post => (
+        <Post key={post._id} post={post} />
+      ))}
+    </div>
+  );
+}
+
+export default Home;
+
+Post.js:
+import React from 'react';
+import { Link } from 'react-router-dom';
+
+function Post({ post }) {
+  return (
+    <div className="post">
+      <Link to={`/profile/${post.user._id}`}>
+        <h3>{post.user.username}</h3>
+      </Link>
+      <img src={post.image} alt={post.caption} />
+      <p>{post.caption}</p>
+      <p>Likes: {post.likes.length}</p>
+    </div>
+  );
+}
+
+export default Post;
+
+It includes user authentication, posting images, and liking posts. To make it production-ready, you'd need to add more features, improve security, handle file uploads, implement real-time updates, and much more.
+Remember, building a full-scale social media platform requires a team of developers and considerable time and resources. This example is meant to give you a starting point and an idea of the components involved.
+
+###############################################################
+###############################################################
+
+Update models (core/models.py):
+from django.db import models
+from django.contrib.auth.models import User
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+class Profile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    bio = models.TextField(max_length=500, blank=True)
+    location = models.CharField(max_length=30, blank=True)
+    birth_date = models.DateField(null=True, blank=True)
+    profile_picture = models.ImageField(upload_to='profile_pics/', default='default.jpg')
+    followers = models.ManyToManyField(User, related_name='following', blank=True)
+
+    def __str__(self):
+        return self.user.username
+
+@receiver(post_save, sender=User)
+def create_user_profile(sender, instance, created, **kwargs):
+    if created:
+        Profile.objects.create(user=instance)
+
+@receiver(post_save, sender=User)
+def save_user_profile(sender, instance, **kwargs):
+    instance.profile.save()
+
+class Post(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='posts/')
+    caption = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    likes = models.ManyToManyField(User, related_name='liked_posts', blank=True)
+
+    def __str__(self):
+        return f'{self.user.username} - {self.created_at}'
+
+class Comment(models.Model):
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='comments')
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    text = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f'{self.user.username} on {self.post}'
+
+class Message(models.Model):
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_messages')
+    receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_messages')
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_read = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f'From {self.sender} to {self.receiver}'
+
+class Notification(models.Model):
+    NOTIFICATION_TYPES = (
+        ('like', 'Like'),
+        ('comment', 'Comment'),
+        ('follow', 'Follow'),
+    )
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES)
+    from_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notification_from')
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, null=True, blank=True)
+    text = models.CharField(max_length=90)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_seen = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f'{self.notification_type} notification for {self.user.username}'
+
+Set up views (core/views.py):
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth import login, authenticate
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.models import User
+from django.db.models import Count
+from .models import Post, Comment, Profile, Message, Notification
+from .forms import PostForm, CommentForm, ProfileUpdateForm
+
+def signup(request):
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            form.save()
+            username = form.cleaned_data.get('username')
+            raw_password = form.cleaned_data.get('password1')
+            user = authenticate(username=username, password=raw_password)
+            login(request, user)
+            return redirect('home')
+    else:
+        form = UserCreationForm()
+    return render(request, 'signup.html', {'form': form})
+
+@login_required
+def home(request):
+    posts = Post.objects.filter(user__in=request.user.following.all()).order_by('-created_at')
+    return render(request, 'home.html', {'posts': posts})
+
+@login_required
+def explore(request):
+    posts = Post.objects.annotate(like_count=Count('likes')).order_by('-like_count')[:20]
+    return render(request, 'explore.html', {'posts': posts})
+
+@login_required
+def create_post(request):
+    if request.method == 'POST':
+        form = PostForm(request.POST, request.FILES)
+        if form.is_valid():
+            post = form.save(commit=False)
+            post.user = request.user
+            post.save()
+            return redirect('home')
+    else:
+        form = PostForm()
+    return render(request, 'create_post.html', {'form': form})
+
+@login_required
+def like_post(request, post_id):
+    post = get_object_or_404(Post, id=post_id)
+    if request.user in post.likes.all():
+        post.likes.remove(request.user)
+    else:
+        post.likes.add(request.user)
+        Notification.objects.create(
+            user=post.user,
+            notification_type='like',
+            from_user=request.user,
+            post=post,
+            text=f'{request.user.username} liked your post'
+        )
+    return redirect('home')
+
+@login_required
+def add_comment(request, post_id):
+    post = get_object_or_404(Post, id=post_id)
+    if request.method == 'POST':
+        form = CommentForm(request.POST)
+        if form.is_valid():
+            comment = form.save(commit=False)
+            comment.post = post
+            comment.user = request.user
+            comment.save()
+            Notification.objects.create(
+                user=post.user,
+                notification_type='comment',
+                from_user=request.user,
+                post=post,
+                text=f'{request.user.username} commented on your post'
+            )
+            return redirect('home')
+    else:
+        form = CommentForm()
+    return render(request, 'add_comment.html', {'form': form})
+
+@login_required
+def profile(request, username):
+    user = get_object_or_404(User, username=username)
+    posts = Post.objects.filter(user=user).order_by('-created_at')
+    return render(request, 'profile.html', {'profile_user': user, 'posts': posts})
+
+@login_required
+def edit_profile(request):
+    if request.method == 'POST':
+        form = ProfileUpdateForm(request.POST, request.FILES, instance=request.user.profile)
+        if form.is_valid():
+            form.save()
+            return redirect('profile', username=request.user.username)
+    else:
+        form = ProfileUpdateForm(instance=request.user.profile)
+    return render(request, 'edit_profile.html', {'form': form})
+
+@login_required
+def follow_unfollow(request, username):
+    user_to_follow = get_object_or_404(User, username=username)
+    if request.user in user_to_follow.profile.followers.all():
+        user_to_follow.profile.followers.remove(request.user)
+    else:
+        user_to_follow.profile.followers.add(request.user)
+        Notification.objects.create(
+            user=user_to_follow,
+            notification_type='follow',
+            from_user=request.user,
+            text=f'{request.user.username} started following you'
+        )
+    return redirect('profile', username=username)
+
+@login_required
+def inbox(request):
+    messages = Message.objects.filter(receiver=request.user).order_by('-created_at')
+    return render(request, 'inbox.html', {'messages': messages})
+
+@login_required
+def send_message(request, username):
+    receiver = get_object_or_404(User, username=username)
+    if request.method == 'POST':
+        content = request.POST.get('content')
+        if content:
+            Message.objects.create(sender=request.user, receiver=receiver, content=content)
+            return redirect('inbox')
+    return render(request, 'send_message.html', {'receiver': receiver})
+
+@login_required
+def notifications(request):
+    notifications = Notification.objects.filter(user=request.user).order_by('-created_at')
+    return render(request, 'notifications.html', {'notifications': notifications})
+
+Create new forms (core/forms.py):
+
+from django import forms
+from .models import Post, Comment, Profile
+
+class PostForm(forms.ModelForm):
+    class Meta:
+        model = Post
+        fields = ['image', 'caption']
+
+class CommentForm(forms.ModelForm):
+    class Meta:
+        model = Comment
+        fields = ['text']
+
+class ProfileUpdateForm(forms.ModelForm):
+    class Meta:
+        model = Profile
+        fields = ['bio', 'location', 'birth_date', 'profile_picture']
+
+Update URLs (instagram_clone/urls.py):
+
+from django.contrib import admin
+from django.urls import path
+from django.contrib.auth import views as auth_views
+from core import views
+from django.conf import settings
+from django.conf.urls.static import static
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('', views.home, name='home'),
+    path('explore/', views.explore, name='explore'),
+    path('signup/', views.signup, name='signup'),
+    path('login/', auth_views.LoginView.as_view(template_name='login.html'), name='login'),
+    path('logout/', auth_views.LogoutView.as_view(next_page='home'), name='logout'),
+    path('create/', views.create_post, name='create_post'),
+    path('like/<int:post_id>/', views.like_post, name='like_post'),
+    path('comment/<int:post_id>/', views.add_comment, name='add_comment'),
+    path('profile/<str:username>/', views.profile, name='profile'),
+    path('profile/edit/', views.edit_profile, name='edit_profile'),
+    path('follow/<str:username>/', views.follow_unfollow, name='follow_unfollow'),
+    path('inbox/', views.inbox, name='inbox'),
+    path('send_message/<str:username>/', views.send_message, name='send_message'),
+    path('notifications/', views.notifications, name='notifications'),
+]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    
+
+1) base.html
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Instagram Clone</title>
+</head>
+<body>
+    <header>
+        <nav>
+            <a href="{% url 'home' %}">Home</a>
+            {% if user.is_authenticated %}
+                <a href="{% url 'create_post' %}">Create Post</a>
+                <a href="{% url 'logout' %}">Logout</a>
+            {% else %}
+                <a href="{% url 'login' %}">Login</a>
+                <a href="{% url 'signup' %}">Sign Up</a>
+            {% endif %}
+        </nav>
+    </header>
+    <main>
+        {% block content %}
+        {% endblock %}
+    </main>
+</body>
+</html>
+
+2) home.html 
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1>Instagram Feed</h1>
+    {% for post in posts %}
+        <div class="post">
+            <img src="{{ post.image.url }}" alt="{{ post.caption }}">
+            <p>{{ post.caption }}</p>
+            <p>Posted by {{ post.user.username }} on {{ post.created_at }}</p>
+            <form action="{% url 'like_post' post.id %}" method="post">
+                {% csrf_token %}
+                <button type="submit">Like</button>
+            </form>
+            <p>Likes: {{ post.like_set.count }}</p>
+        </div>
+    {% endfor %}
+{% endblock %}
+
+3) Credit_post.html 
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1>Create a New Post</h1>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Post</button>
+    </form>
+{% endblock %}
+
+
+4) explore.html 
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1>Explore</h1>
+    {% for post in posts %}
+        <div class="post">
+            <img src="{{ post.image.url }}" alt="{{ post.caption }}">
+            <p>{{ post.caption }}</p>
+            <p>Posted by <a href="{% url 'profile' post.user.username %}">{{ post.user.username }}</a></p>
+            <p>Likes: {{ post.likes.count }}</p>
+        </div>
+    {% endfor %}
+{% endblock %}
+
+5) Profile.html 
+
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1>{{ profile_user.username }}'s Profile</h1>
+    <img src="{{ profile_user.profile.profile_picture.url }}" alt="{{ profile_user.username }}">
+    <p>{{ profile_user.profile.bio }}</p>
+    <p>Location: {{ profile_user.profile.location }}</p>
+    <p>Followers: {{ profile_user.profile.followers.count }}</p>
+    <p>Following: {{ profile_user.following.count }}</p>
+    
+    {% if user != profile_user %}
+        <form action="{% url 'follow_unfollow' profile_user.username %}" method="post">
+            {% csrf_token %}
+            {% if user in profile_user.profile.followers.all %}
+                <button type="submit">Unfollow</button>
+            {% else %}
+                <button type="submit">Follow</button>
+            {% endif %}
+        </form>
+    {% else %}
+        <a href="{% url 'edit_profile' %}">Edit Profile</a>
+    {% endif %}
+
+    <h2>Posts</h2>
+    {% for post in posts %}
+        <div class="post">
+            <img src="{{ post.image.url }}" alt="{{ post.caption }}">
+            <p>{{ post.caption }}</p>
+            <p>Likes: {{ post.likes.count }}</p>
+        </div>
+    {% endfor %}
+{% endblock %}
+
+6) edit_profile.html 
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1>Edit Profile</h1>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Save Changes</button>
+    </form>
+{% endblock %}
+
+7) inbox.html 
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1>Inbox</h1>
+    {% for message in messages %}
+        <div class="message">
+            <p>From: {{ message.sender.username }}</p>
+            <p>{{ message.content }}</p>
+            <p>{{ message.created_at }}</p>
+        </div>
+    {% endfor %}
+{% endblock %}
+
+8) send_message.thml 
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1>Send Message to {{ receiver.username }}</h1>
+    <form method="post">
+        {% csrf_token %}
+        <textarea name="content" required></textarea>
+        <button type="submit">Send</button>
+    </form>
+{% endblock %}
+
+9) notification.html 
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1>Notifications</h1>
+    {% for notification in notifications %}
+        <div class="notification">
+            <p>{{ notification.text }}</p>
+            <p>{{ notification.created_at }}</p>
+        </div>
+    {% endfor %}
+{% endblock %}
+
+Update settings (instagram_clone/settings.py):
+
+INSTALLED_APPS = [
+    # ...
+    'core',
+]
+
+# ...
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+
+Create forms (core/forms.py):
+from django import forms
+from .models import Post
+
+class PostForm(forms.ModelForm):
+    class Meta:
+        model = Post
+        fields = ['image', 'caption']
+
+python manage.py makemigrations
+python manage.py migrate
+python manage.py createsuperuser
+
+
+python manage.py runserver
+
+...
+
+To make this a complete Instagram clone, you would need to add more features like:
+
+Stories
+Hashtags and search functionality
+Photo filters and editing
+Location tagging
+Multi-photo posts
+Video support
+Privacy settings
+Suggested users
+Activity feed
+Archived posts
+Saved posts
+IGTV
+Reels
+Advanced analytics
+

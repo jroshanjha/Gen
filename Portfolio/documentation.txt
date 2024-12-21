@@ -1,0 +1,20 @@
+step:- 
+
+pip install virtualenv
+
+virtualenv venv
+
+
+pip install flask-mysqldb
+
+python -m venv venv
+
+venv\scripts\activate
+
+.. pip install pymysql
+
+pip install Flask-SQLAlchemy
+
+
+.. create database if not exists users;
+

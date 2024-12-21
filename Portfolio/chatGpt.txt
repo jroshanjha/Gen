@@ -1,0 +1,530 @@
+pip install django
+django-admin startproject instaclone
+cd instaclone
+python manage.py startapp socialapp
+
+pip install django-allauth
+
+
+1) setting.py 
+
+INSTALLED_APPS = [
+    ...
+    'django.contrib.sites',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
+]
+
+AUTHENTICATION_BACKENDS = (
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+)
+
+SITE_ID = 1
+
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'
+
+2) 
+# instaclone/urls.py
+from django.urls import path
+from socialapp import views
+
+urlpatterns = [
+    path('', views.feed, name='feed'),
+    path('post/create/', views.create_post, name='create_post'),
+    path('post/<int:post_id>/like/', views.like_post, name='like_post'),
+    path('post/<int:post_id>/comment/', views.add_comment, name='add_comment'),
+]
+
+# instaclone/urls.py
+from django.urls import path, include
+
+urlpatterns = [
+    path('accounts/', include('allauth.urls')),
+    path('', include('socialapp.urls')),
+]
+
+
+####### User Profile 
+
+# socialapp/models.py
+class Profile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    bio = models.TextField(max_length=500, blank=True)
+    profile_picture = models.ImageField(upload_to='profile_pics/', default='default.jpg')
+    followers = models.ManyToManyField(User, related_name='followers', blank=True)
+
+    def __str__(self):
+        return f'{self.user.username} Profile'
+
+# Signal to create/update profile
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+@receiver(post_save, sender=User)
+def create_user_profile(sender, instance, created, **kwargs):
+    if created:
+        Profile.objects.create(user=instance)
+
+@receiver(post_save, sender=User)
+def save_user_profile(sender, instance, **kwargs):
+    instance.profile.save()
+
+
+POST , LIKE , COMMENT 
+
+# socialapp/models.py
+from django.db import models
+from django.contrib.auth.models import User
+
+class Post(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='posts/')
+    caption = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f'{self.user.username} - {self.caption}'
+
+class Comment(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='comments')
+    text = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f'{self.user.username} - {self.text}'
+
+class Like(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='likes')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f'{self.user.username} liked {self.post.caption}'
+
+# socialapp/views.py
+from django.shortcuts import render, redirect
+from .models import Post, Comment, Like
+from django.contrib.auth.decorators import login_required
+
+@login_required
+def feed(request):
+    posts = Post.objects.all().order_by('-created_at')
+    return render(request, 'feed.html', {'posts': posts})
+
+@login_required
+def create_post(request):
+    if request.method == 'POST':
+        image = request.FILES.get('image')
+        caption = request.POST.get('caption')
+        post = Post.objects.create(user=request.user, image=image, caption=caption)
+        return redirect('feed')
+    return render(request, 'create_post.html')
+
+@login_required
+def like_post(request, post_id):
+    post = Post.objects.get(id=post_id)
+    like, created = Like.objects.get_or_create(user=request.user, post=post)
+    if not created:
+        like.delete()
+    return redirect('feed')
+
+@login_required
+def add_comment(request, post_id):
+    post = Post.objects.get(id=post_id)
+    if request.method == 'POST':
+        text = request.POST.get('text')
+        Comment.objects.create(user=request.user, post=post, text=text)
+    return redirect('feed')
+
+# socialapp/views.py
+from django.shortcuts import render, redirect
+from .models import Post, Comment, Like
+from django.contrib.auth.decorators import login_required
+
+@login_required
+def feed(request):
+    posts = Post.objects.all().order_by('-created_at')
+    return render(request, 'feed.html', {'posts': posts})
+
+@login_required
+def create_post(request):
+    if request.method == 'POST':
+        image = request.FILES.get('image')
+        caption = request.POST.get('caption')
+        post = Post.objects.create(user=request.user, image=image, caption=caption)
+        return redirect('feed')
+    return render(request, 'create_post.html')
+
+@login_required
+def like_post(request, post_id):
+    post = Post.objects.get(id=post_id)
+    like, created = Like.objects.get_or_create(user=request.user, post=post)
+    if not created:
+        like.delete()
+    return redirect('feed')
+
+@login_required
+def add_comment(request, post_id):
+    post = Post.objects.get(id=post_id)
+    if request.method == 'POST':
+        text = request.POST.get('text')
+        Comment.objects.create(user=request.user, post=post, text=text)
+    return redirect('feed')
+
+TEMPLATES 
+
+<!-- templates/feed.html -->
+{% for post in posts %}
+    <div>
+        <img src="{{ post.image.url }}" alt="Post image">
+        <p>{{ post.caption }}</p>
+        <p>{{ post.likes.count }} Likes</p>
+        <a href="{% url 'like_post' post.id %}">Like</a>
+        <form method="post" action="{% url 'add_comment' post.id %}">
+            {% csrf_token %}
+            <input type="text" name="text" placeholder="Add a comment">
+            <button type="submit">Comment</button>
+        </form>
+        <p>Comments:</p>
+        {% for comment in post.comments.all %}
+            <p>{{ comment.user.username }}: {{ comment.text }}</p>
+        {% endfor %}
+    </div>
+{% endfor %}
+
+# socialapp/models.py
+class Story(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='stories/', blank=True, null=True)
+    video = models.FileField(upload_to='stories/', blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(default=lambda: timezone.now() + timezone.timedelta(hours=24))
+
+    def __str__(self):
+        return f'{self.user.username} Story'
+
+class Story(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='stories/', blank=True, null=True)
+    video = models.FileField(upload_to='stories/', blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(default=lambda: timezone.now() + timezone.timedelta(hours=24))
+
+    def is_active(self):
+        return timezone.now() < self.expires_at
+<!-- templates/story.html -->
+{% for story in stories %}
+    {% if story.is_active %}
+        <div>
+            {% if story.image %}
+                <img src="{{ story.image.url }}" alt="Story image">
+            {% elif story.video %}
+                <video controls>
+                    <source src="{{ story.video.url }}" type="video/mp4">
+                </video>
+            {% endif %}
+            <p>{{ story.user.username }}</p>
+        </div>
+    {% endif %}
+{% endfor %}
+
+
+
+# socialapp/views.py
+@login_required
+def create_story(request):
+    if request.method == 'POST':
+        image = request.FILES.get('image')
+        video = request.FILES.get('video')
+        Story.objects.create(user=request.user, image=image, video=video)
+        return redirect('feed')
+    return render(request, 'create_story.html')
+
+Direct Messages DMs
+# socialapp/models.py
+class Message(models.Model):
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_messages')
+    recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_messages')
+    text = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_read = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f'Message from {self.sender.username} to {self.recipient.username}'
+
+WebSockets (Django Channels):
+pip install channels
+
+Setting.py 
+INSTALLED_APPS += ['channels']
+ASGI_APPLICATION = 'instaclone.asgi.application'
+
+# socialapp/models.py
+class Notification(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    text = models.CharField(max_length=255)
+    link = models.URLField(max_length=200)
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f'Notification for {self.user.username}'
+# socialapp/views.py
+@login_required
+def notifications(request):
+    notifications = request.user.notifications.all().order_by('-created_at')
+    return render(request, 'notifications.html', {'notifications': notifications})
+
+Hashtags & Search 
+# socialapp/views.py
+from django.db.models import Q
+
+@login_required
+def search(request):
+    query = request.GET.get('query')
+    posts = Post.objects.filter(Q(caption__icontains=query) | Q(user__username__icontains=query))
+    return render(request, 'search_results.html', {'posts': posts})
+
+class Hashtag(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.name
+
+class Post(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='posts/')
+    caption = models.TextField(blank=True)
+    hashtags = models.ManyToManyField(Hashtag, related_name='posts')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        hashtags = re.findall(r"#(\w+)", self.caption)
+        for tag in hashtags:
+            hashtag, created = Hashtag.objects.get_or_create(name=tag)
+            self.hashtags.add(hashtag)
+
+from django.db.models import Q
+
+@login_required
+def search(request):
+    query = request.GET.get('query')
+    posts = Post.objects.filter(Q(caption__icontains=query) | Q(hashtags__name__icontains=query))
+    return render(request, 'search_results.html', {'posts': posts})
+
+Photo Filters and Editing
+
+<!-- templates/create_post.html -->
+<canvas id="photoCanvas"></canvas>
+<input type="file" id="uploadPhoto" accept="image/*">
+<button id="applyFilter">Apply Filter</button>
+const canvas = new fabric.Canvas('photoCanvas');
+document.getElementById('uploadPhoto').addEventListener('change', function(e) {
+    const reader = new FileReader();
+    reader.onload = function(event) {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = function() {
+            const image = new fabric.Image(img);
+            canvas.add(image);
+        }
+    }
+    reader.readAsDataURL(e.target.files[0]);
+});
+
+document.getElementById('applyFilter').addEventListener('click', function() {
+    const activeObject = canvas.getActiveObject();
+    if (activeObject) {
+        activeObject.filters.push(new fabric.Image.filters.Grayscale());
+        activeObject.applyFilters();
+        canvas.renderAll();
+    }
+});
+
+Location Tagging 
+class Location(models.Model):
+    name = models.CharField(max_length=255)
+    latitude = models.FloatField()
+    longitude = models.FloatField()
+
+    def __str__(self):
+        return self.name
+
+class Post(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='posts/')
+    caption = models.TextField(blank=True)
+    location = models.ForeignKey(Location, on_delete=models.SET_NULL, null=True, blank=True)
+    ...
+
+Multi-Photo Posts
+class Post(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    caption = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class Photo(models.Model):
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='photos')
+    image = models.ImageField(upload_to='posts/')
+
+
+@login_required
+def create_post(request):
+    if request.method == 'POST':
+        caption = request.POST.get('caption')
+        post = Post.objects.create(user=request.user, caption=caption)
+        images = request.FILES.getlist('images')
+        for image in images:
+            Photo.objects.create(post=post, image=image)
+        return redirect('feed')
+    return render(request, 'create_post.html')
+
+Video Post 
+class Video(models.Model):
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='videos')
+    video_file = models.FileField(upload_to='videos/')
+
+@login_required
+def create_post(request):
+    if request.method == 'POST':
+        caption = request.POST.get('caption')
+        post = Post.objects.create(user=request.user, caption=caption)
+        videos = request.FILES.getlist('videos')
+        for video in videos:
+            Video.objects.create(post=post, video_file=video)
+        return redirect('feed')
+    return render(request, 'create_post.html')
+
+Privacy Settings
+
+class Profile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    bio = models.TextField(max_length=500, blank=True)
+    profile_picture = models.ImageField(upload_to='profile_pics/', default='default.jpg')
+    followers = models.ManyToManyField(User, related_name='followers', blank=True)
+    is_private = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f'{self.user.username} Profile'
+
+@login_required
+def follow_user(request, user_id):
+    user = User.objects.get(id=user_id)
+    if user.profile.is_private:
+        # Send a follow request to the user for approval
+        FollowRequest.objects.create(from_user=request.user, to_user=user)
+    else:
+        user.profile.followers.add(request.user)
+    return redirect('profile', user_id=user_id)
+
+Suggested User 
+@login_required
+def suggested_users(request):
+    current_user_following = request.user.profile.followers.all()
+    suggested = Profile.objects.exclude(user__in=current_user_following).exclude(user=request.user)
+    return render(request, 'suggested_users.html', {'suggested_users': suggested})
+
+Active feed 
+
+class Activity(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    activity_type = models.CharField(max_length=100)  # e.g., 'like', 'comment', 'follow'
+    related_post = models.ForeignKey(Post, on_delete=models.CASCADE, null=True, blank=True)
+    related_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='activity_related_user', null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+@login_required
+def activity_feed(request):
+    activities = Activity.objects.filter(user=request.user).order_by('-created_at')
+    return render(request, 'activity_feed.html', {'activities': activities})
+
+Archived Post 
+class Post(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    caption = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_archived = models.BooleanField(default=False)
+
+@login_required
+def archive_post(request, post_id):
+    post = Post.objects.get(id=post_id)
+    post.is_archived = True
+    post.save()
+    return redirect('profile', user_id=request.user.id)
+
+
+
+FRONTEND:- 
+
+// PostFeed.js
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+
+const PostFeed = () => {
+    const [posts, setPosts] = useState([]);
+
+    useEffect(() => {
+        axios.get('/api/posts/')
+            .then(response => setPosts(response.data))
+            .catch(error => console.error('Error fetching posts', error));
+    }, []);
+
+    return (
+        <div>
+            {posts.map(post => (
+                <div key={post.id}>
+                    <img src={post.image} alt="Post" />
+                    <p>{post.caption}</p>
+                    <p>{post.likes_count} Likes</p>
+                    <button>Like</button>
+                </div>
+            ))}
+        </div>
+    );
+};
+
+export default PostFeed;
+
+
+
+
+
+python manage.py makemigrations
+python manage.py migrate
+
+# In settings.py
+LOGIN_URL = '/login/'
+LOGIN_REDIRECT_URL = '/'
+
+
+pip install django-allauth add in settting.py
+Add allauth and configure it in settings.py.
+
+
+
+Static & Media Files
+Configure MEDIA_URL and MEDIA_ROOT in settings.py to handle image uploads.
+
+
+Deployment
+Deploy using platforms like Heroku, AWS, or DigitalOcean.
+Use gunicorn as a WSGI server for deployment.
+Set up a CI/CD pipeline for automatic deployment.
+
+8. Security & Optimization
+Use Django’s built-in security features.
+Optimize image storage and loading using tools like Cloudinary or AWS S3.
+Implement caching strategies for frequently accessed data.
+
+9. Advanced Features (Optional)
+Implementing Stories
+Direct Messaging (DMs)
+Notifications
+Hashtags and Search
+Follow/Unfollow system

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flask Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script href="{{ url_for('static',filename='beautifull.css') }}"> </script>
+</head>
+<body>
+    <h1>Dashboard</h1>
+    <div class="dashboard">
+        <div class="card">
+            <h2>Total Users</h2>
+            <div class="metric">{{ user_count }}</div>
+        </div>
+        <div class="card">
+            <h2>Total Revenue</h2>
+            <div class="metric">${{ revenue }}</div>
+        </div>
+        <div class="card">
+            <h2>Weekly Sales</h2>
+            <canvas id="salesChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        var ctx = document.getElementById('salesChart').getContext('2d');
+        var salesChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                datasets: [{
+                    label: 'Sales',
+                    data: {{ sales_data }},
+                    borderColor: 'rgb(75, 192, 192)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

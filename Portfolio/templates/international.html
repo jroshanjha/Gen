@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>International Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .card {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .metric {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+    </style>
+</head>
+<body>
+    <h1>International Dashboard</h1>
+    <div class="dashboard">
+        <div class="card">
+            <h2>Total Revenue</h2>
+            <div class="metric">${{ '{:,}'.format(total_revenue) }}</div>
+        </div>
+        <div class="card">
+            <h2>Total Customers</h2>
+            <div class="metric">{{ '{:,}'.format(total_customers) }}</div>
+        </div>
+        <div class="card">
+            <h2>Customer Satisfaction</h2>
+            <div class="metric">{{ '%.2f' % customer_satisfaction }}/5.0</div>
+        </div>
+        <div class="card">
+            <h2>Monthly Sales</h2>
+            <div class="chart-container">
+                <canvas id="monthlySalesChart"></canvas>
+            </div>
+        </div>
+        <div class="card">
+            <h2>Sales by Country</h2>
+            <div class="chart-container">
+                <canvas id="countrySalesChart"></canvas>
+            </div>
+        </div>
+        <div class="card">
+            <h2>Product Category Sales</h2>
+            <div class="chart-container">
+                <canvas id="productSalesChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Add this new card for the scatter plot -->
+        <div class="card">
+            <h2>Customers vs Revenue by Region</h2>
+            <div class="chart-container">
+                <canvas id="scatterChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Add this new card for the bar chart -->
+        <div class="card">
+            <h2>Sample Bar Chart</h2>
+            <div id="barChart" class="chart-container"></div>
+        </div>
+
+        <!-- Add this new card for the line chart -->
+        <div class="card">
+            <h2>Sample Line Chart</h2>
+            <div id="lineChart" class="line-container"></div>
+        </div>
+
+        <!-- Add this new card for the pie chart -->
+        <div class="card">
+            <h2>Sample Pie Chart</h2>
+            <div id="pieChart" class="pie-container"></div>
+        </div>
+
+        <!-- Scatter Plot -->
+        <div class="card">
+            <h2>Sample Scatter Plot</h2>
+            <div id="scatterChart1" class="chart-container"></div>
+        </div>
+        
+    </div>
+
+    <script>
+        // Monthly Sales Line Chart
+        var monthlySalesCtx = document.getElementById('monthlySalesChart').getContext('2d');
+        new Chart(monthlySalesCtx, {
+            type: 'line',
+            data: {
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                datasets: [{
+                    label: 'Monthly Sales',
+                    data: {{ monthly_sales }},
+                    borderColor: 'rgb(75, 192, 192)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+
+        // Country Sales Bar Chart
+        var countrySalesCtx = document.getElementById('countrySalesChart').getContext('2d');
+        var countrySalesData = JSON.parse('{{ country_sales | safe }}');
+        new Chart(countrySalesCtx, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(countrySalesData),
+                datasets: [{
+                    label: 'Sales by Country',
+                    data: Object.values(countrySalesData),
+                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                    borderColor: 'rgb(54, 162, 235)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Product Sales Pie Chart
+        var productSalesCtx = document.getElementById('productSalesChart').getContext('2d');
+        var productSalesData = JSON.parse('{{ product_sales | safe }}');
+        new Chart(productSalesCtx, {
+            type: 'pie',
+            data: {
+                labels: Object.keys(productSalesData),
+                datasets: [{
+                    data: Object.values(productSalesData),
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.8)',
+                        'rgba(54, 162, 235, 0.8)',
+                        'rgba(255, 206, 86, 0.8)',
+                        'rgba(75, 192, 192, 0.8)',
+                        'rgba(153, 102, 255, 0.8)',
+                        'pink'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+
+        // Scatter Plot
+        var scatterCtx = document.getElementById('scatterChart').getContext('2d');
+        var scatterData = JSON.parse('{{ scatter_data | safe }}');
+        new Chart(scatterCtx, {
+            type: 'bubble',
+            data: {
+                datasets: [{
+                    label: 'Regions',
+                    data: scatterData,
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.6)',
+                        'rgba(54, 162, 235, 0.6)',
+                        'rgba(255, 206, 86, 0.6)',
+                        'rgba(75, 192, 192, 0.6)',
+                        'rgba(153, 102, 255, 0.6)',
+                        'rgba(255, 159, 64, 0.6)'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Number of Customers (thousands)'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Revenue (thousands $)'
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                var label = context.raw.region || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                label += '(' + context.parsed.x + 'k customers, $' + context.parsed.y + 'k revenue)';
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Bar Chart using Plotly
+        var barChartData = JSON.parse('{{ bar_chart | safe }}');
+        Plotly.newPlot('barChart', barChartData.data, barChartData.layout);
+
+        
+        // Line Chart using Plotly
+        var lineChartData = JSON.parse('{{ line_chart | safe }}');
+        Plotly.newPlot('lineChart', lineChartData.data, lineChartData.layout);
+
+        // Pie Chart using Plotly
+        var pieChartData = JSON.parse('{{ pie_chart | safe }}');
+        Plotly.newPlot('pieChart', pieChartData.data, pieChartData.layout);
+
+
+        // Scatter Plot using Plotly
+        var scatterChartData = JSON.parse('{{ scatter_chart | safe }}');
+        Plotly.newPlot('scatterChart1', scatterChartData.data, scatterChartData.layout);
+
+
+    </script>
+</body>
+</html>

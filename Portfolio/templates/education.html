@@ -1,0 +1,48 @@
+
+<canvas id="runChart" width="400" height="200"></canvas>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var ctx = document.getElementById('runChart').getContext('2d');
+    var chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: {{ data.overs|tojson }},
+            datasets: [{
+                label: 'India Runs',
+                data: {{ data.india|tojson }},
+                borderColor: 'blue',
+                fill: false
+            }, {
+                label: 'Sri Lanka Runs',
+                data: {{ data.sri|tojson }},
+                borderColor: 'green',
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            title: {
+                display: true,
+                text: 'India vs Sri Lanka: Over-wise Runs'
+            },
+            scales: {
+                x: {
+                    display: true,
+                    title: {
+                        display: true,
+                        text: 'Over'
+                    }
+                },
+                y: {
+                    display: true,
+                    title: {
+                        display: true,
+                        text: 'Runs'
+                    }
+                }
+            }
+        }
+    });
+});
+</script>

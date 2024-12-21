@@ -1,0 +1,64 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+    <div id="dashboard">
+        {% for chart in charts %}
+            <div id="{{ chart.id }}"></div>
+        {% endfor %}
+    </div>
+    <script>
+        {% for chart in charts %}
+            Plotly.newPlot('{{ chart.id }}', {{ chart.figure | safe }});
+        {% endfor %}
+    </script>
+</body>
+</html> -->
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+        .dashboard { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+        .chart { background: white; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); padding: 15px; }
+        #slider-chart { grid-column: 1 / 2; }
+        #pie-chart { grid-column: 1 / 2; }
+        #line-chart { grid-column: 2 / 3; }
+        #bar-chart { grid-column: 3 / 4; grid-row: 1 / 3; }
+        #area-chart { grid-column: 1 / 3; }
+        #language-chart {grid-column: 2 / 3;}
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        {% for chart in charts %}
+            <div id="{{ chart.id }}" class="chart"></div>
+        {% endfor %}
+    </div>
+    <script>
+        {% for chart in charts %}
+            Plotly.newPlot('{{ chart.id }}', JSON.parse('{{ chart.figure | safe }}').data, JSON.parse('{{ chart.figure | safe }}').layout);
+        {% endfor %}
+    </script>
+
+    {% for i in charts1 %}
+    <div id="{{ i.id }}" style="width:600px;height:400px;"></div>
+    <script>
+        var figure = JSON.parse('{{ i.figure | safe }}');
+        Plotly.newPlot('{{ i.id }}', figure.data, figure.layout);
+    </script>
+    {% endfor %}
+
+</body>
+</html>
