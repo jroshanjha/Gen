@@ -217,20 +217,25 @@ def translation():
             if source_lang_name and target_lang_name and input_text:
                 source_lang = LANGUAGE_CODES[source_lang_name]
                 target_lang = LANGUAGE_CODES[target_lang_name]
+                #return [source_lang, target_lang, input_text]
                 # Prevent invalid model names (e.g., en-en)
                 if source_lang == target_lang:
-                    #translated_text = "Error: Source and target languages cannot be the same."
-                    translated_text = translated_text
+                    #return [source_lang, target_lang]
+                    translated_text = "Error: Source and target languages cannot be the same."
+                    #translated_text = translated_text
                 else:
+                    # return 'testing abc else functions'
                     try:
                         tokenizer, model = load_translation_model(source_lang, target_lang)
                         translated_text = translate_text(tokenizer, model, input_text)
                     except ValueError as ve:
-                        #translated_text = str(ve)
-                        translated_text = translated_text
+                        translated_text = str(ve)
+                        #translated_text = translated_text
                     except Exception as e:
-                        #translated_text = f"An error occurred: {str(e)}"
-                        translated_text = translated_text
+                        translated_text = f"An error occurred: {str(e)}"
+                        #translated_text = translated_text
+                    #return [translated_text] 
+                    return render_template('translation.html',languages=LANGUAGE_CODES,translated_text=translated_text,source_lang = source_lang,target_lang = target_lang)
         return render_template("translation.html",
                                languages=LANGUAGE_CODES, # language_codes.keys()
                                translated_text=translated_text,
