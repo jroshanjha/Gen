@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 
 # -- #from langchain.llms import OpenAI
 # -- #from langchain.chains import QuestionAnsweringChain
+
 # Option 1: Set API key directly
 
 # Option 2: Set environment variable
