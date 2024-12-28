@@ -15,7 +15,7 @@ model = genai.GenerativeModel("learnlm-1.5-pro-experimental")
 #model = genai.GenerativeModel("gemini-pro")
 def get_gemini_response(text):
     response = model.generate_content(text)
-    return response.text 
+    return response.text
 
 ## Initialize the streamlet applications:- 
 
