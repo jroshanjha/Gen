@@ -24,7 +24,6 @@ genai.configure(api_key=os.getenv("GOOGLE_API_SERVICE"))
 ## function to load Gemini Pro model and get repsonses
 #model=genai.GenerativeModel("gemini-pro") 
 
-
 # PDF reader fun
 def pdf_reader(pdf_file):
     text=""
