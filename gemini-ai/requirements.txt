@@ -12,3 +12,14 @@ langchain_community
 pypdf
 google-cloud-aiplatform>=1.38
 numpy==1.24.3
+pillow
+
+beautifulsoup4 
+pandas 
+nltk 
+textblob 
+plotly 
+requests
+
+selenium
+webdriver-manager
