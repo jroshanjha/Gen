@@ -62,6 +62,7 @@ def log_progress(user_id, lesson_name, score):
         conn.close()
         # return True
 
+
 def fetch_user_progress(user_id):
     # conn = mysql.connector.connect(
     #     host="localhost",

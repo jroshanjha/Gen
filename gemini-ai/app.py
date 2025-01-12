@@ -16,8 +16,7 @@ def get_gemini_response(text):
     response = model.generate_content(text)
     return response.text
 
-## Initialize the streamlet applications:- 
-
+## Initialize the streamlit applications:- 
 st.set_page_config(page_title='Question & Answers Application')
 st.header('Content-Type:- Gemini Application')
 #st.write('Gemini is a large language model that can be used for a variety of tasks,')
