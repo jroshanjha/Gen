@@ -35,7 +35,6 @@ def scrape_amazon_products(search_term, num_products=5):
             "https://www.zeptonow.com/",
         ]
         
-        
             # "https://www.aliexpress.com",
             # "https://www.newegg.com",
             # "https://www.rakuten.com",

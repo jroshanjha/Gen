@@ -3,3 +3,17 @@ conda create -p venv python==3.11 -y
 conda activate venv/
 
 streamlit run app.py
+
+
+pip install -U langchain langchain-openai
+
+LANGSMITH_TRACING=true
+LANGSMITH_ENDPOINT="https://api.smith.langchain.com"
+LANGSMITH_API_KEY="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"
+LANGSMITH_PROJECT="pr-giving-uncle-32"
+OPENAI_API_KEY="<your-openai-api-key>"
+
+from langchain_openai import ChatOpenAI
+
+llm = ChatOpenAI()
+llm.invoke("Hello, world!")

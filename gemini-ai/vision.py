@@ -15,9 +15,11 @@ from dotenv import load_dotenv
 # In terminal/command prompt:
 # export GOOGLE_API_KEY='YOUR_API_KEY'
 
+load_dotenv()
 #genai.configure(api_key='AIzaSyCWsS5zmsstSDipuLUHyfVLFP-1LkcVlxs')
-os.getenv("GOOGLE_API_SERVICE")
+#os.getenv("GOOGLE_API_SERVICE")
 genai.configure(api_key=os.getenv("GOOGLE_API_SERVICE"))
+
 
 ### functions to load Gemini Pro Model and get response:- 
 
