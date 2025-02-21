@@ -3,3 +3,8 @@ langchain_core
 python-dotenv
 streamlit
 langchain_community
+streamlit 
+transformers 
+torch 
+plotly 
+pandas
