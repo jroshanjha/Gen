@@ -24,6 +24,9 @@ requests
 
 selenium
 webdriver-manager
-
-
 chromadb
+
+geopy
+
+folium 
+streamlit-folium
